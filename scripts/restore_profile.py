@@ -136,6 +136,21 @@ def apply_owned_skills(profile: Path, codex_home: Path, entries: list[dict[str, 
         plan.append(f"INSTALLED owned Skill: {destination}")
 
 
+def preview_owned_skills(profile: Path, codex_home: Path, entries: list[dict[str, Any]], plan: list[str]) -> None:
+    destination_root = codex_home / "skills"
+    for entry in entries:
+        if entry.get("kind") != "owned" or not entry.get("path"):
+            continue
+        source = profile / str(entry["path"])
+        destination = destination_root / str(entry["name"])
+        if not source.is_dir():
+            raise ValueError(f"owned Skill source is missing: {source}")
+        if destination.exists():
+            plan.append(f"SKIP existing Skill: {destination}")
+        else:
+            plan.append(f"INSTALL owned Skill: {source} -> {destination}")
+
+
 def apply_owned_plugins(profile: Path, destination_root: Path | None, entries: list[dict[str, Any]], plan: list[str]) -> None:
     owned = [entry for entry in entries if entry.get("kind") == "owned" and entry.get("path")]
     if not owned:
@@ -154,6 +169,24 @@ def apply_owned_plugins(profile: Path, destination_root: Path | None, entries: l
         plan.append(f"INSTALLED owned Plugin source: {destination}")
 
 
+def preview_owned_plugins(profile: Path, destination_root: Path | None, entries: list[dict[str, Any]], plan: list[str]) -> None:
+    owned = [entry for entry in entries if entry.get("kind") == "owned" and entry.get("path")]
+    if not owned:
+        return
+    if destination_root is None:
+        plan.append("MANUAL: provide --plugin-dest to install owned Plugin source")
+        return
+    for entry in owned:
+        source = profile / str(entry["path"])
+        destination = destination_root / str(entry["id"])
+        if not source.is_dir():
+            raise ValueError(f"owned Plugin source is missing: {source}")
+        if destination.exists():
+            plan.append(f"SKIP existing Plugin: {destination}")
+        else:
+            plan.append(f"INSTALL owned Plugin source: {source} -> {destination}")
+
+
 def apply_config_sources(profile: Path, codex_home: Path, plan: list[str]) -> None:
     config_root = profile / "config"
     for relative in ("AGENTS.md", "rules", "agents", "hooks"):
@@ -170,6 +203,19 @@ def apply_config_sources(profile: Path, codex_home: Path, plan: list[str]) -> No
             destination.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(source, destination)
         plan.append(f"INSTALLED config source: {destination}")
+
+
+def preview_config_sources(profile: Path, codex_home: Path, plan: list[str]) -> None:
+    config_root = profile / "config"
+    for relative in ("AGENTS.md", "rules", "agents", "hooks"):
+        source = config_root / relative
+        destination = codex_home / relative
+        if not source.exists():
+            continue
+        if destination.exists():
+            plan.append(f"SKIP existing config source: {destination}")
+        else:
+            plan.append(f"INSTALL config source: {source} -> {destination}")
 
 
 def main() -> int:
@@ -196,8 +242,11 @@ def main() -> int:
             plan.append(f"MERGE config values into {destination_config}")
         for item in unresolved.get("items", []):
             plan.append(f"UNRESOLVED {item.get('kind', 'item')}: {item.get('name', 'unnamed')} ({item.get('reason', 'review required')})")
-        plan.extend(f"MANUAL: {item}" for item in actions)
         if not args.apply:
+            preview_owned_skills(profile, codex_home, skills.get("skills", []), plan)
+            preview_owned_plugins(profile, args.plugin_dest.expanduser().resolve() if args.plugin_dest else None, plugins.get("plugins", []), plan)
+            preview_config_sources(profile, codex_home, plan)
+            plan.extend(f"MANUAL: {item}" for item in actions)
             print(json.dumps({"mode": "dry-run", "profile": str(profile), "plan": plan, "conflicts": conflicts}, indent=2, ensure_ascii=False))
             return 1 if conflicts or unresolved.get("items") else 0
         if conflicts:
@@ -223,6 +272,7 @@ def main() -> int:
         apply_owned_skills(profile, codex_home, skills.get("skills", []), plan)
         apply_owned_plugins(profile, args.plugin_dest.expanduser().resolve() if args.plugin_dest else None, plugins.get("plugins", []), plan)
         apply_config_sources(profile, codex_home, plan)
+        plan.extend(f"MANUAL: {item}" for item in actions)
         print(json.dumps({"mode": "apply", "profile": str(profile), "plan": plan, "manual_actions": actions}, indent=2, ensure_ascii=False))
         return 0
     except (OSError, ValueError, RuntimeError, json.JSONDecodeError) as error:
@@ -247,3 +297,4 @@ def parse_args() -> argparse.Namespace:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+

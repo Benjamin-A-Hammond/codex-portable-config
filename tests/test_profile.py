@@ -86,6 +86,28 @@ class ProfileTests(unittest.TestCase):
         self.assertIn("TOKEN", rendered)
         self.assertNotIn("secret", rendered.casefold())
 
+    def test_dry_run_previews_owned_skill_without_copying_it(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            profile = root / "profile"
+            source = profile / "skills" / "owned"
+            destination_home = root / "codex"
+            source.mkdir(parents=True)
+            (source / "SKILL.md").write_text("---\nname: owned\ndescription: test\n---\n", encoding="utf-8")
+            plan = []
+
+            restore_profile.preview_owned_skills(
+                profile,
+                destination_home,
+                [{"name": "owned", "kind": "owned", "path": "skills/owned"}],
+                plan,
+            )
+
+            self.assertEqual(1, len(plan))
+            self.assertIn("INSTALL owned Skill", plan[0])
+            self.assertFalse((destination_home / "skills" / "owned").exists())
+
 
 if __name__ == "__main__":
     unittest.main()
+
