@@ -1,6 +1,6 @@
 # Portable repository contract
 
-The generated repository is an auditable source of truth from which a local Codex configuration can be reconstructed. It is not a live `CODEX_HOME` and must not contain volatile Codex state.
+The generated profile is an auditable source of truth from which a local Codex configuration can be reconstructed. It is not a live `CODEX_HOME` and must not contain volatile Codex state or externally installed source trees.
 
 ## Recommended layout
 
@@ -10,32 +10,25 @@ codex-portable-config/
 |-- LICENSE
 |-- .gitignore
 |-- config/
-|   |-- config.portable.toml
-|   `-- local.example.toml
+|   `-- config.portable.toml
 |-- skills/
 |   `-- <user-authored-skill>/
 |-- plugins/
 |   `-- <user-authored-plugin>/
 |-- manifests/
-|   |-- third-party-skills.json
+|   |-- skills.json
 |   |-- plugins.json
-|   |-- mcp-requirements.json
-|   `-- provenance.json
-|-- scripts/
-|   |-- bootstrap.ps1
-|   |-- bootstrap.sh
-|   |-- update.ps1
-|   |-- update.sh
-|   `-- doctor.py
+|   |-- mcp.json
+|   `-- unresolved.json
 `-- local/
     `-- README.md
 ```
 
 The `local/` directory is gitignored except for its README. It holds rendered configuration or per-machine values when needed.
 
-## Bootstrap contract
+## Restore contract
 
-Every bootstrap implementation must support a read-only or dry-run mode and must:
+Every restore implementation must support a read-only or dry-run mode and must:
 
 1. resolve the current home and effective Codex locations at runtime;
 2. inventory planned source and destination paths;
@@ -43,22 +36,22 @@ Every bootstrap implementation must support a read-only or dry-run mode and must
 4. back up each user-owned file before modifying it;
 5. merge only repository-managed configuration sections;
 6. install user-authored skills without deleting unrelated local skills;
-7. install or register custom plugin sources through supported Codex mechanisms;
-8. report third-party plugins and skills that require reinstall;
-9. report environment variables and OAuth connections that require local action;
+7. install or register user-authored Plugin sources through supported Codex mechanisms;
+8. report external Plugins and Skills that require reinstall from their manifests;
+9. report environment variables, OAuth connections, and runtime packages that require local action;
 10. validate the installed files and produce a machine-local receipt.
 
 The receipt must not contain secret values or absolute project paths and must remain outside Git.
 
 ## Configuration ownership
 
-Mark generated sections with stable comments or maintain a separate structural manifest so updates can distinguish repository-managed values from user-local values. Do not treat the full destination `config.toml` as repository-owned.
+`config/config.portable.toml` is the profile-owned source. The restore script compares it structurally with the destination and appends only missing values after a backup. Do not treat the full destination `config.toml` as repository-owned.
 
 When TOML merging cannot preserve an unknown construct safely, stop and present a proposed manual merge rather than rewriting the file.
 
 ## Plugin handling
 
-Custom plugin sources may be committed when provenance and licensing are clear. Installed marketplace plugins should normally appear in `manifests/plugins.json` with fields such as:
+User-authored plugin sources may be committed after explicit ownership confirmation. Externally installed plugins must appear in `manifests/plugins.json` with fields such as:
 
 ```json
 {
@@ -78,7 +71,7 @@ Do not invent missing versions or repository URLs. Use `null` plus a setup warni
 
 ## MCP handling
 
-`config/config.portable.toml` may contain directly usable definitions only when they have no secret or machine-local values. Servers requiring local values belong in `manifests/mcp-requirements.json`, and the bootstrap renders their final tables after collecting those values locally.
+`manifests/mcp.json` is the canonical portable MCP description. It contains server names, transport, package or endpoint identifiers, non-secret arguments, and required environment-variable names. The restore process renders MCP tables into the destination config after collecting local values. `config/config.portable.toml` contains other stable non-secret user parameters.
 
 The doctor must distinguish:
 

@@ -1,33 +1,31 @@
 # Export policy
 
-Use this policy to decide what may enter a portable Codex configuration repository. The goal is reproducibility, not a byte-for-byte backup.
+Use this policy to decide what may enter a portable Codex configuration repository. The goal is reproducibility, not a byte-for-byte backup. A generated profile is data plus explicitly confirmed user-owned source; it is never a snapshot of `CODEX_HOME`.
 
 ## Export by value
 
 Export files only when they are user-authored or redistribution is permitted:
 
-- personal or repository skills, including their `SKILL.md`, scripts, references, assets, and UI metadata;
-- custom plugin source trees with their manifests and license;
+- user-authored skills and plugin source trees, including their `SKILL.md`, scripts, references, assets, UI metadata, manifests, and license, but only after the user explicitly confirms ownership;
 - user-authored `AGENTS.md`, rules, hooks, and agent definitions after removing local identifiers;
 - non-secret configuration preferences that are stable across machines;
 - MCP server definitions after structural sanitization;
-- bootstrap, update, validation, and diagnostic scripts written for the portable repository.
+- export, restore, validation, and diagnostic scripts written for the portable repository.
 
 ## Export by reference
 
 Record identifiers instead of copying installed code:
 
-- public or marketplace plugin identifier and source;
-- third-party skill repository URL, revision or release, subpath, and license;
+- every externally sourced Skill or Plugin: name or identifier, source/install URL, revision or release, subpath, install mode, and license when known;
 - package-manager dependencies and version constraints;
-- MCP packages such as npm, PyPI, container, or remote endpoint identifiers;
+- MCP packages such as npm, PyPI, container, or remote endpoint identifiers, plus non-secret arguments and version constraints;
 - required environment-variable names, never values.
 
 Avoid pinning a local cache hash or app-version path as if it were a portable package version.
 
 ## Convert to local setup data
 
-Move these values into a gitignored local override or an interactive bootstrap prompt:
+Move these values into a gitignored local override or an interactive restore prompt:
 
 - absolute executable and virtual-environment paths;
 - home directories, usernames, drive letters, removable-volume paths, and project roots;
@@ -35,7 +33,7 @@ Move these values into a gitignored local override or an interactive bootstrap p
 - optional runtime locations;
 - organization-specific endpoints or headers that are not intended for public release.
 
-Portable examples use placeholders such as `${CODEX_PORTABLE_ROOT}`, `${PROJECTS_ROOT}`, `OWNER`, `example.com`, and environment-variable names. Do not claim Codex expands a placeholder unless the generated bootstrap actually renders it.
+Portable examples use placeholders such as `${CODEX_PORTABLE_ROOT}`, `${PROJECTS_ROOT}`, `OWNER`, `example.com`, and environment-variable names. Do not claim Codex expands a placeholder unless the generated restore process actually renders it.
 
 ## Always exclude
 
@@ -74,7 +72,7 @@ Replace unsafe values with documented local requirements. Do not silently drop a
 
 ## Third-party licensing
 
-Before copying a third-party skill or plugin, locate its license and verify redistribution is allowed. Preserve notices and required attribution. If no license is present, do not copy it; record the source for reinstall.
+Do not copy third-party Skill or Plugin source, even when a license permits redistribution. Record its source, version, subpath, and license metadata for reinstall. Preserve notices only for explicitly user-authored source that is copied.
 
 System and bundled Codex skills should be reinstalled with Codex, not vendored.
 
@@ -87,5 +85,5 @@ The public tree must pass all of the following:
 - no unreviewed binaries;
 - no personal or private names in filenames, content, commit messages, or repository description;
 - no historical commit containing content that was later removed;
-- a clean installation test in a temporary home;
+- a clean restore test in a temporary home;
 - explicit selection of a compatible open-source license.
