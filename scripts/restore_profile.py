@@ -92,7 +92,12 @@ def external_actions(skills: dict[str, Any], plugins: dict[str, Any]) -> list[st
     for entry in skills.get("skills", []):
         if entry.get("kind") == "external" and entry.get("source"):
             source = str(entry["source"])
-            actions.append(f"skill-installer install {source}")
+            ref = entry.get("ref") or "main"
+            subpath = str(entry.get("subpath") or "").strip("/")
+            install_url = source.rstrip("/") + "/tree/" + str(ref)
+            if subpath:
+                install_url += "/" + subpath
+            actions.append(f"skill-installer install {install_url}")
     for entry in plugins.get("plugins", []):
         if entry.get("kind") == "external":
             label = entry.get("id", "unnamed-plugin")

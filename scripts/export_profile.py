@@ -18,6 +18,7 @@ SECRET_KEY = re.compile(r"(?i)(?:secret|token|password|passwd|api[_-]?key|privat
 MACHINE_KEY = re.compile(r"(?i)^(?:cwd|working[_-]?directory|executable|binary|home|path|root|socket)$")
 ABSOLUTE_PATH = re.compile(r"^(?:[A-Za-z]:[\\/]|/|\\\\)")
 VOLATILE_NAMES = {".git", ".sandbox", ".sandbox-bin", "cache", "logs", "packages", "sessions", "sqlite"}
+BARE_KEY = re.compile(r"^[A-Za-z0-9_-]+$")
 
 
 def parse_pipe_spec(raw: str, fields: list[str]) -> dict[str, Any]:
@@ -47,6 +48,9 @@ def sanitize_value(value: Any, path: tuple[str, ...], warnings: list[str]) -> An
         for key, child in value.items():
             key_text = str(key)
             if key_text == "mcp_servers":
+                continue
+            if key_text in {"projects", "marketplaces"} or key_text.casefold() == "perpath":
+                warnings.append(f"excluded machine-local state: {'.'.join(path + (key_text,))}")
                 continue
             if key_text.casefold() in {"env", "environment", "headers", "http_headers"}:
                 warnings.append(f"excluded environment/header values: {'.'.join(path + (key_text,))}")
@@ -141,6 +145,10 @@ def toml_scalar(value: Any) -> str:
     return json.dumps(str(value), ensure_ascii=False)
 
 
+def toml_key(value: str) -> str:
+    return value if BARE_KEY.fullmatch(value) else json.dumps(value, ensure_ascii=False)
+
+
 def render_toml(data: dict[str, Any]) -> str:
     lines: list[str] = []
 
@@ -149,11 +157,11 @@ def render_toml(data: dict[str, Any]) -> str:
         nested = [(key, value) for key, value in table.items() if isinstance(value, dict)]
         arrays = [(key, value) for key, value in table.items() if isinstance(value, list) and any(isinstance(item, dict) for item in value)]
         for key, value in scalars:
-            lines.append(f"{key} = {toml_scalar(value) if not isinstance(value, list) else json.dumps(value, ensure_ascii=False)}")
+            lines.append(f"{toml_key(str(key))} = {toml_scalar(value) if not isinstance(value, list) else json.dumps(value, ensure_ascii=False)}")
         for key, value in nested:
             if lines and lines[-1] != "":
                 lines.append("")
-            lines.append(f"[{'.'.join(prefix + (key,))}]")
+            lines.append(f"[{'.'.join(toml_key(str(part)) for part in prefix + (key,))}]")
             emit_table(value, prefix + (key,))
         for key, value in arrays:
             for item in value:
@@ -161,7 +169,7 @@ def render_toml(data: dict[str, Any]) -> str:
                     raise ValueError(f"unsupported TOML array value at {'.'.join(prefix + (key,))}")
                 if lines and lines[-1] != "":
                     lines.append("")
-                lines.append(f"[[{'.'.join(prefix + (key,))}]]")
+                lines.append(f"[[{'.'.join(toml_key(str(part)) for part in prefix + (key,))}]]")
                 emit_table(item, prefix + (key,))
 
     emit_table(data)
@@ -229,6 +237,8 @@ def build_profile(args: argparse.Namespace) -> dict[str, Any]:
         if not root.is_dir():
             continue
         for child in sorted(root.iterdir()):
+            if child.name == ".system" or ".partial" in child.name:
+                continue
             if child.is_dir() and child.name not in owned_skill_names and not any(item.get("name") == child.name for item in skills):
                 unresolved.append({"kind": "skill", "name": child.name, "discovered_at": root_name, "reason": "source URL and provenance were not supplied"})
 
@@ -245,6 +255,18 @@ def build_profile(args: argparse.Namespace) -> dict[str, Any]:
     (output / "manifests").mkdir(exist_ok=True)
     (output / "local").mkdir(exist_ok=True)
     (output / ".gitignore").write_text("local/*\n!local/README.md\n*.receipt.json\n", encoding="utf-8")
+    (output / "README.md").write_text(
+        "# Codex portable profile\n\n"
+        "This profile stores portable, non-secret Codex configuration. Explicitly confirmed user-owned Skill and Plugin source may be included; external components are recorded in manifests for reinstall.\n\n"
+        "## Restore\n\n"
+        "Install the public `codex-portable-config` Skill, run its restore helper in dry-run mode, review the plan, and then apply it. API keys, OAuth sign-in, runtimes, and unresolved sources remain manual setup.\n\n"
+        "## Files\n\n"
+        "- `config/`: stable non-secret configuration and user instructions.\n"
+        "- `skills/` and `plugins/`: explicitly owned source only.\n"
+        "- `manifests/`: external Skill, Plugin, and MCP reinstall metadata.\n"
+        "- `local/`: machine-local notes and receipts; do not commit secrets.\n",
+        encoding="utf-8",
+    )
     (output / "config" / "config.portable.toml").write_text(render_toml(portable), encoding="utf-8")
     (output / "local" / "README.md").write_text("Machine-local overrides, receipts, and secret setup stay here and must not be committed.\n", encoding="utf-8")
     write_json(output / "manifests" / "skills.json", {"schema_version": 1, "skills": sorted(skills, key=lambda item: item["name"])})
