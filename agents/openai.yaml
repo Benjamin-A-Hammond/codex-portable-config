@@ -1,0 +1,8 @@
+interface:
+  display_name: "Codex Portable Config"
+  short_description: "Export a private-safe, reproducible Codex setup"
+  default_prompt: "Use $codex-portable-config to build a sanitized portable repository from this local Codex setup."
+
+policy:
+  allow_implicit_invocation: true
+
