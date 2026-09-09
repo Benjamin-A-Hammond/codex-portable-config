@@ -17,7 +17,7 @@ Create or restore a reviewable profile repository that can reproduce the portabl
 - Treat public GitHub publication as a separate external mutation. Complete the local export and privacy audit first, show the audit result and repository diff, then obtain authorization if public release was not already explicitly requested.
 - Keep secrets local. Portable MCP configuration may name environment variables but must not contain their values.
 
-Read [references/export-policy.md](references/export-policy.md) before selecting local files. Read [references/repository-contract.md](references/repository-contract.md) for the profile schema and restore behavior.
+Read [references/export-policy.md](references/export-policy.md) before selecting local files. Read [references/repository-contract.md](references/repository-contract.md) for the profile schema and restore behavior. For a restore request, also read [references/fresh-machine-restore.md](references/fresh-machine-restore.md) and follow its approval boundary and final checklist.
 
 ## Workflow
 
@@ -69,7 +69,7 @@ Do not weaken the scanner or add broad ignore rules merely to make it pass. Repl
 
 ### 5. Restore or publish
 
-For a new machine, run `scripts/restore_profile.py` in dry-run mode first, then use `--apply` only after reviewing the plan. The restore process backs up and merges configuration, installs owned source, and reports external Skill/Plugin installation actions for the system Skill installer or the appropriate Plugin mechanism.
+For a new machine, run `scripts/restore_profile.py` in dry-run mode first and show the complete plan. Do not apply changes or install external components until the user approves that preview. After approval, use `--apply`, then execute resolved external Skill/Plugin actions through the available system Skill installer or supported Plugin mechanism. Do not claim that the standalone helper installs third-party components: it deliberately reports those actions for agent-guided execution.
 
 Initialize Git only after validation. Use a generic repository description and a recognized open-source license selected by the user; when unspecified, ask before choosing a license because licensing changes redistribution rights.
 
@@ -89,3 +89,5 @@ Distinguish what was exported from what still requires per-machine action, espec
 - removable-drive discovery or project registration.
 
 The profile is complete only when these gaps are documented and its dry-run restore plan explains them without exposing local values.
+
+End every restore with a status split between completed work and manual requirements. The manual section must explicitly cover GitHub authentication, secret/environment values, OAuth and Plugin connections, runtime dependencies, machine-local MCP setup, removable-drive/project discovery, and any required Codex restart.

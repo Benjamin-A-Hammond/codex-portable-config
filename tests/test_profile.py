@@ -67,6 +67,12 @@ class ProfileTests(unittest.TestCase):
             self.assertNotIn("secret-value", json.dumps(mcp))
             unresolved = json.loads((output / "manifests" / "unresolved.json").read_text(encoding="utf-8"))
             self.assertTrue(any(item["name"] == "external-local" for item in unresolved["items"]))
+            profile_readme = (output / "README.md").read_text(encoding="utf-8")
+            self.assertIn("<PROFILE_REPOSITORY_URL>", profile_readme)
+            self.assertIn("GitHub authentication", profile_readme)
+            self.assertIn("OAuth", profile_readme)
+            self.assertIn("machine-local MCP", profile_readme)
+            self.assertIn("Do not apply changes", profile_readme)
 
     def test_restore_merge_reports_conflict_and_preserves_equal_values(self):
         patch, conflicts = restore_profile.merge_patch(
@@ -110,4 +116,3 @@ class ProfileTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-

@@ -92,8 +92,9 @@ The generated README must describe:
 - what is portable and what is intentionally excluded;
 - supported platforms;
 - fresh-machine prerequisites;
-- installation, dry-run, update, rollback, and doctor commands;
-- secret and OAuth setup boundaries;
+- a copy-ready agent prompt for dry-run, approval, apply, external reinstall, and doctor checks;
+- installation, remote/local dry-run, update, rollback, and doctor commands;
+- GitHub authentication, secret values, OAuth, runtime, local MCP, removable-drive/project, and restart boundaries;
 - provenance and licensing policy;
 - known platform-specific components.
 
