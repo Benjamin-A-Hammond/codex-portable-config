@@ -105,4 +105,3 @@ The generated README must describe:
 - known platform-specific components.
 
 Examples must use placeholders and public sample domains. Do not personalize the repository from the source machine.
-

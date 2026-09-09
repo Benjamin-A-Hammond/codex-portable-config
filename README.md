@@ -49,4 +49,3 @@ Validate the skill with the `quick_validate.py` script distributed with Codex's 
 ## License
 
 MIT. See [LICENSE](LICENSE).
-

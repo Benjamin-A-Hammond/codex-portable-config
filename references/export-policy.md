@@ -89,4 +89,3 @@ The public tree must pass all of the following:
 - no historical commit containing content that was later removed;
 - a clean installation test in a temporary home;
 - explicit selection of a compatible open-source license.
-

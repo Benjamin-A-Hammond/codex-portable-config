@@ -89,4 +89,3 @@ Distinguish what was exported from what still requires per-machine action, espec
 - removable-drive discovery or project registration.
 
 The repository is complete only when these gaps are documented and its dry-run bootstrap explains them without exposing local values.
-
